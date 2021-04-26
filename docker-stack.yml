@@ -46,6 +46,8 @@ services:
         target: /usr/share/logstash/config/logstash.yml
       - source: logstash_pipeline
         target: /usr/share/logstash/pipeline/logstash.conf
+      - source: claroflex_pipeline
+        target: /usr/share/logstash/pipeline/claroflex_pipeline.conf
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
     networks:
@@ -67,6 +69,47 @@ services:
       mode: replicated
       replicas: 1
 
+  database:
+    image: mysql:5.7.34
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=RrU78C98TC9qIMZd9Mv3B8h25
+      - MYSQL_USER=djan_claroflex
+      - MYSQL_PASSWORD=jYzNB5SGFyiav52BSmZgP1tXw
+      - MYSQL_DATABASE=claroflex_v02
+    volumes:
+      - ./database/config/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf
+      - ./database/mysql:/var/lib/mysql
+    networks:
+      - elk
+
+  claroflex-erp-django:
+    image: claroflex-erp-django:latest
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./claroflex-erp-django/settings/production_settings.py:/home/djan_claroflex/claroflex-erp-django/claroflex/production_settings.py
+      - ./claroflex-erp-django/filebeat/filebeat.yml:/etc/filebeat/filebeat.yml
+    networks:
+      - elk
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - database
+
+
+#  claroflex-gantt-chart-django:
+#    image: claroflex-gantt-chart-django:latest
+#    ports:
+#      - "8080:8080"
+#    networks:
+#      - elk
+#    deploy:
+#      mode: replicated
+#      replicas: 1
+
 configs:
 
   elastic_config:
@@ -75,6 +118,9 @@ configs:
     file: ./logstash/config/logstash.yml
   logstash_pipeline:
     file: ./logstash/pipeline/logstash.conf
+  claroflex_pipeline:
+    file: ./logstash/pipeline/claroflex_pipeline.conf
+
   kibana_config:
     file: ./kibana/config/kibana.yml
 
